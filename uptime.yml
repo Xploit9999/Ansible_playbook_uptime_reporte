@@ -1,0 +1,61 @@
+---
+- name: Reporte de tiempo en servicio de los servidores
+  hosts: all
+  gather_facts: false
+  vars:
+    reporte: /ruta/de/mi/reporte.sql
+  pre_tasks:
+
+  - block:
+    - name: UPTIME | Se elimina reporte anterior
+      file:
+        path: "{{ reporte }}"
+        state: absent
+    delegate_to: localhost
+    run_once: true
+
+  tasks:
+
+  - name: UPTIME | Se recolecta fact en especifico.
+    setup:
+      gather_subset:
+        - '!all'
+        - '!min'
+        - hardware
+    async: 200
+    poll: 1
+
+  - name: UPTIME | Se toma el uptime del servidor y se realiza conversión a formato leible.
+    set_fact:
+      uptime: "{{ now.().replace(microsecond=0) - now().fromtimestamp(now(fmt='%s') | int - ansible_uptime_seconds) }}"
+
+  - name: UPTIME | Modela query con el uptime obtenido
+    set_fact:
+      query: "insert into uptime values({{ quotes + inventory_hostname + quotes }}, {{ quotes + uptime + quotes }});"
+    vars:
+      quotes: "'"
+    when: uptime is defined
+
+  post_tasks:
+
+  - block:
+    - name: UPTIME | Escribe reporte con la query construida
+      lineinfile:
+        path: "{{ reporte }}"
+        line: "{{ query }}"
+        create: true
+      throttle: 1
+
+    - name: UPTIME | Asegurar que no haya lineas en el reporte diferentes al query.
+      replace:
+        path: "{{ reporte }}"
+        regexp: "^(?!insert).*$"
+        replace: ''
+
+    - name: UPTIME | Remueve lineas vacias
+      lineinfile:
+        path: "{{ reporte }}"
+        regexp: '^$'
+        state: absent
+    delegate_to: localhost
+...
