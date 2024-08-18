@@ -1,6 +1,6 @@
 ---
 - name: Reporte de tiempo en servicio de los servidores
-  hosts: all
+  hosts: all 
   gather_facts: false
   vars:
     reporte: /ruta/de/mi/reporte.sql
@@ -27,7 +27,7 @@
 
   - name: UPTIME | Se toma el uptime del servidor y se realiza conversión a formato leible.
     set_fact:
-      uptime: "{{ now.().replace(microsecond=0) - now().fromtimestamp(now(fmt='%s') | int - ansible_uptime_seconds) }}"
+      uptime: "{{ now().replace(microsecond=0) - now().fromtimestamp(now(fmt='%s') | int - ansible_uptime_seconds) }}"
 
   - name: UPTIME | Modela query con el uptime obtenido
     set_fact:
